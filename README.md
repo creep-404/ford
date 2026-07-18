@@ -1,416 +1,204 @@
-# Ford Car Dataset — EDA, Preprocessing & ML Pipeline
+# Ford Car Price Predictor — Full Project README
 
 ## Overview
 
-This project performs a complete exploratory data analysis (EDA),
-preprocessing pipeline, and machine learning model training on the
-**Ford Car Dataset**, a used-car listings dataset containing
-**17,966 records** and **9 columns**. The goal is to clean the data,
-understand its structure and distributions, identify relationships
-between features, and build a Linear Regression model to predict
-used Ford car resale price.
+This project covers the complete lifecycle of a Ford used-car price
+prediction system: from raw data exploration and cleaning, through
+model training (two separate assignments, two different pipelines),
+to building working Streamlit web app frontends for each model.
 
-**Dataset columns:** `model`, `year`, `price`, `transmission`, `mileage`,
-`fuelType`, `tax`, `mpg`, `engineSize`
-
-**Tools used:** `pandas`, `numpy`, `matplotlib`, `seaborn`,
-`scikit-learn` (`StandardScaler`, `LinearRegression`, `r2_score`),
-`joblib`
+**Dataset:** `ford_car.csv` — 17,966 rows, 9 columns
+(`model`, `year`, `price`, `transmission`, `mileage`, `fuelType`,
+`tax`, `mpg`, `engineSize`)
 
 ---
 
 ## Table of Contents
 
-1. [Q1 — Data Loading & Initial Analysis](#q1--data-loading--initial-analysis)
-2. [Q2 — Missing & Duplicate Values](#q2--missing--duplicate-values)
-3. [Q3 — Statistical Summary](#q3--statistical-summary)
-4. [Q4 — Histograms of Numeric Features](#q4--histograms-of-numeric-features)
-5. [Q5 — Count Plots of Categorical Features](#q5--count-plots-of-categorical-features)
-6. [Q6 — Correlation Heatmap](#q6--correlation-heatmap)
-7. [Q7 — Feature Identification](#q7--feature-identification)
-8. [Q8 — Encoding Categorical Variables](#q8--encoding-categorical-variables)
-9. [Q9 — Feature Scaling](#q9--feature-scaling)
-10. [Q10 — Complete Preprocessing Pipeline](#q10--complete-preprocessing-pipeline)
-11. [Q11 — Preparing Features (X and Y)](#q11--preparing-features-x-and-y)
-12. [Q12 — One-Hot Encoding](#q12--one-hot-encoding)
-13. [Q13 — Feature Scaling (StandardScaler)](#q13--feature-scaling-standardscaler)
-14. [Q14 — Train-Test Split](#q14--train-test-split)
-15. [Q15 — Building Linear Regression Model](#q15--building-linear-regression-model)
-16. [Q16 — Making Predictions](#q16--making-predictions)
-17. [Q17 — Model Evaluation using R² Score](#q17--model-evaluation-using-r-score)
-18. [Q18 — Saving the Model](#q18--saving-the-model)
-19. [Project Files](#project-files)
-20. [Key Takeaways](#key-takeaways)
+1. [Part 1 — EDA & Preprocessing Pipeline](#part-1--eda--preprocessing-pipeline)
+2. [Part 2 — Model Training (Assignment 20)](#part-2--model-training-assignment-20)
+3. [Part 3 — Session 21: Building the Streamlit App](#part-3--session-21-building-the-streamlit-app)
+4. [Part 4 — The LabelEncoder Discovery](#part-4--the-labelencoder-discovery)
+5. [Part 5 — Building `frontend.py` for the Assignment 20 Model](#part-5--building-frontendpy-for-the-assignment-20-model)
+6. [Part 6 — Debugging & Environment Issues](#part-6--debugging--environment-issues)
+7. [Current Project Files](#current-project-files)
+8. [Where Things Stand](#where-things-stand)
 
 ---
 
-## Q1 — Data Loading & Initial Analysis
+## Part 1 — EDA & Preprocessing Pipeline
 
-Loaded the dataset with `pandas.read_csv()` and inspected its structure
-using `head(10)`, `tail(5)`, `.shape`, and `.dtypes`.
+The dataset was first explored and cleaned end-to-end (Q1–Q10 of an
+earlier pipeline):
 
-**Findings:**
-- Shape: **17,966 rows × 9 columns**
-- Data types: 4 integer columns (`year`, `price`, `mileage`, `tax`), 2
-  float columns (`mpg`, `engineSize`), 3 categorical/string columns
-  (`model`, `transmission`, `fuelType`)
-- No ID column is present — pandas default integer index serves as the
-  row identifier
-- `price` stands out as the natural target variable, with all other
-  columns describing car attributes
+- **Q1–Q3:** Loaded the data, checked shape/dtypes, found 154 duplicate
+  rows (removed, leaving 17,812 rows), confirmed zero missing values,
+  and flagged a bad data point — a `year` value of **2060**.
+- **Q4–Q6:** Plotted histograms, count plots, and a correlation heatmap.
+  Found `price` and `mileage` right-skewed; `year` (+0.64) and
+  `mileage` (−0.53) were the strongest price drivers; Petrol/Manual/
+  Fiesta were the dominant categories.
+- **Q7–Q9:** Identified `price` as the target and the other 8 columns
+  as features; one-hot encoded the 3 categorical columns
+  (`model`, `transmission`, `fuelType`) with `drop_first=True`; scaled
+  the 5 numeric columns with `StandardScaler`.
+- **Q10:** Combined everything into one pipeline, producing a final
+  `X` of shape `(17812, 33)` and `y` of shape `(17812,)`.
 
----
-
-## Q2 — Missing & Duplicate Values
-
-Checked for missing values with `df.isnull().sum()` and duplicates with
-`df.duplicated().sum()`.
-
-**Findings:**
-- **Missing values:** 0 across every column — the dataset required no
-  imputation
-- **Duplicate rows:** 154 exact duplicates found, likely from repeated
-  listings in the source data
-- **Handling:** Removed with `drop_duplicates()` and reset the index;
-  final row count: **17,812**
+This pipeline was documentation/exploration only — it wasn't the
+version whose `.pkl` files ended up being used later.
 
 ---
 
-## Q3 — Statistical Summary
+## Part 2 — Model Training (Assignment 20)
 
-Generated `df.describe()` and examined min/max/mean/median for `price`,
-`mileage`, and `year`.
+A second, separate notebook (**Session 20 Assignment**, by Shahid Ahmad
+Khan) trained the actual Linear Regression model that got saved and
+reused for the Streamlit frontend work:
 
-| Feature | Min | Max | Mean | Median |
-|---|---|---|---|---|
-| price | 495 | 54,995 | 12,269.56 | 11,288.00 |
-| mileage | 1 | 177,644 | 23,381.15 | 18,277.00 |
-| year | 1996 | 2060 | 2016.86 | 2017.00 |
+- **Q1:** Loaded `ford_car.csv`, split into `X` (8 features) and
+  `Y = price`. Shape: `X (17966, 8)`, `Y (17966,)`.
+- **Q2–Q3 (exploratory only):** Showed one-hot encoding via
+  `pd.get_dummies()` producing 36 columns, then StandardScaler applied
+  on top of that — **but this encoding approach was not what got used
+  in the final saved model** (see Part 4).
+- **Q4:** `train_test_split(test_size=0.33, random_state=42)`.
+- **Q5:** Trained `LinearRegression()`. Intercept ≈ `17210.92`.
+- **Q6–Q7:** Predicted on the test set; **R² score = 0.7366**.
+- **Q8:** Saved the final artifacts with `joblib.dump()`:
+  - `LR_ford_car.pkl` — the trained model
+  - `scaler.pkl` — the fitted `StandardScaler`
+  - `columns.pkl` — the list of feature column names
 
-**Findings:**
-- `price` and `mileage` are both **right-skewed** (mean > median)
-- `year` is concentrated around recent model years
-- **Data quality flag:** the maximum `year` value is **2060** — an
-  impossible future date, almost certainly a data-entry error that
-  should be corrected or removed before modeling
-
----
-
-## Q4 — Histograms of Numeric Features
-
-Plotted histograms for `price`, `mileage`, `year`, `engineSize`, and
-`mpg`.
-
-📊 *See: `Q4_histograms.png`*
-
-**Findings:**
-- **price:** right-skewed, most listings under ~20,000 with a long tail
-  toward ~55,000
-- **mileage:** right-skewed, most cars under ~40,000 miles with a long
-  tail to ~177,000
-- **year:** concentrated in 2016–2020, with the 2060 outlier clearly
-  visible as an isolated bar
-- **engineSize:** multimodal, with peaks at common Ford displacements
-  (1.0L, 1.5L, 2.0L)
-- **mpg:** roughly unimodal around 55–65 mpg, with a thin tail past 150
-  mpg likely from Hybrid/Electric models
+Critically, the **Q8 code path** switched from the one-hot approach
+shown earlier in the notebook to using **`LabelEncoder`** instead —
+looping over the 3 categorical columns and reassigning a single shared
+`le` object each time. This is the pipeline that actually produced the
+saved `.pkl` files.
 
 ---
 
-## Q5 — Count Plots of Categorical Features
+## Part 3 — Session 21: Building the Streamlit App
 
-Created count plots for `fuelType`, `transmission`, and `model` using
-seaborn.
+Working through the **Session 21 (AIML) Assignment Questions** PDF,
+`app.py` was built up incrementally, one question at a time:
 
-📊 *See: `Q5_countplots.png`*
-
-**Most common categories:**
-
-| Column | Top category | Count |
-|---|---|---|
-| fuelType | Petrol | 12,081 |
-| transmission | Manual | 15,383 |
-| model | Fiesta | 6,509 |
-
-**Market trend insights:**
-- Petrol dominates over Diesel/Hybrid/Electric, suggesting the data
-  predates widespread EV/hybrid adoption
-- Manual outnumbering Automatic reflects a European/UK-style used-car
-  market
-- Fiesta and Focus dominate the model counts, consistent with their
-  reputation as Ford best-selling, mass-market models
-
----
-
-## Q6 — Correlation Heatmap
-
-Computed the correlation matrix for all numeric features and visualized
-it as an annotated seaborn heatmap.
-
-📊 *See: `Q6_heatmap.png`*
-
-**Correlation with price (sorted):**
-
-| Feature | Correlation with price |
+| Q | What was added |
 |---|---|
-| year | +0.64 |
-| engineSize | +0.41 |
-| tax | +0.41 |
-| mpg | −0.35 |
-| mileage | −0.53 |
+| Q1 | Imports: `streamlit`, `pandas`, `joblib`, with comments on each |
+| Q2 | `joblib.load()` calls for `model`, `scaler`, `encoded_columns` |
+| Q3 | `st.set_page_config(page_title="Ford Car Price Predictor", layout="centered")` |
+| Q4 | `st.title()` + `st.write()` description |
+| Q5 | `st.number_input()` fields for year, mileage, tax, mpg, engine size — ranges pulled from the real min/max/median of `ford_car.csv` |
+| Q6 | `st.selectbox()` dropdowns for transmission and fuel type (verified actual category values in the CSV, including `Electric` and `Other` fuel types not mentioned in the assignment text) |
+| Q7 | `st.text_input()` for car model name + `st.button("Predict Price")` |
+| Q8 | Inside `if predict_clicked:` — built the input `DataFrame`, one-hot encoded with `pd.get_dummies()`, aligned to `encoded_columns` via `reindex(fill_value=0)` |
+| Q9 | Scaled the 5 numeric columns with the loaded scaler, ran `model.predict()`, displayed the result with `st.success()` formatted as `£X,XXX.XX` |
+| Q10 | Combined everything into one clean `app.py`, with error handling (`try/except` around file loading and prediction) and a nicer two-column layout for the number inputs |
 
-**Observations:**
-- `year` is the strongest positive driver of price — newer cars cost more
-- `mileage` is the strongest negative driver — higher mileage lowers
-  resale value
-- `year` and `mileage` are themselves strongly correlated (−0.71),
-  flagging a multicollinearity risk for linear models
-
----
-
-## Q7 — Feature Identification
-
-**Independent Features (Inputs):** `model`, `year`, `transmission`,
-`mileage`, `fuelType`, `tax`, `mpg`, `engineSize`
-
-**Dependent Feature (Target):** `price`
-
-**Justification:** `price` is the outcome we want to predict, while all
-other columns describe properties of the car that are determined before
-a price is set (e.g. mileage and year come from usage history, not from
-price). The correlation analysis in Q6 supports treating these as causal
-inputs to price.
+This version assumes **one-hot encoded** training columns (matching
+the Part 1 pipeline), which turned out to be a mismatch with the
+actual saved `.pkl` files from Part 2.
 
 ---
 
-## Q8 — Encoding Categorical Variables
+## Part 4 — The LabelEncoder Discovery
 
-Applied **One-Hot Encoding** via `pd.get_dummies()` on `model`,
-`transmission`, and `fuelType`, using `drop_first=True` to avoid the
-dummy variable trap.
+When asked to build a frontend for the **Assignment 20** model
+specifically (the PDF's optional task), a closer read of that PDF's
+final Q8 code revealed the mismatch:
 
-**Before → After (example: `transmission`):**
+- `columns.pkl` from Assignment 20 holds just **8 plain column names**
+  (`model`, `year`, `transmission`, `mileage`, `fuelType`, `tax`,
+  `mpg`, `engineSize`) — not 36 one-hot dummy columns.
+- The categorical columns were converted to integers via
+  `LabelEncoder`, not `pd.get_dummies()`.
+- The training code never saved the fitted `LabelEncoder` itself —
+  only the model, scaler, and column list — so the exact category→
+  number mapping used during training wasn't stored anywhere.
 
-| Before | → | transmission_Manual | transmission_Semi-Auto |
-|---|---|---|---|
-| Automatic | | False | False |
-| Manual | | True | False |
+Since scikit-learn's `LabelEncoder` assigns codes in **alphabetical
+order** of the unique values by default, the original mapping was
+reconstructed directly from `ford_car.csv`:
 
-**Shape change:** `(17812, 9)` → `(17812, 34)`
+```python
+model     -> B-MAX:0, C-MAX:1, EcoSport:2, ... Transit Tourneo:22  (23 values)
+transmission -> Automatic:0, Manual:1, Semi-Auto:2
+fuelType  -> Diesel:0, Electric:1, Hybrid:2, Other:3, Petrol:4
+```
 
----
-
-## Q9 — Feature Scaling
-
-Applied `StandardScaler` from scikit-learn to the numeric independent
-features: `year`, `mileage`, `tax`, `mpg`, `engineSize`.
-
-**First 5 rows of scaled data:**
-
-| year | mileage | tax | mpg | engineSize |
-|---|---|---|---|---|
-| 0.067 | −0.383 | 0.591 | −0.021 | −0.811 |
-| 0.554 | −0.736 | 0.591 | −0.021 | −0.811 |
-| 0.067 | −0.563 | 0.591 | −0.021 | −0.811 |
-| 1.042 | −0.665 | 0.511 | −1.738 | 0.345 |
-| 1.042 | −1.128 | 0.511 | −0.909 | −0.811 |
-
-Scaling puts every numeric feature on a mean-0, standard-deviation-1
-scale, which is essential for distance-based or gradient-based models.
+This confirmed the Session 21 `app.py` (one-hot based) and the
+Assignment 20 model (label-encoded) are **not interchangeable** — each
+needed its own frontend logic.
 
 ---
 
-## Q10 — Complete Preprocessing Pipeline
+## Part 5 — Building `frontend.py` for the Assignment 20 Model
 
-Combined every prior step into a single end-to-end pipeline:
+A new file, `frontend.py`, was built specifically for the Assignment 20
+model:
 
-1. **Load & clean** — read CSV, drop 154 duplicate rows, confirm zero
-   missing values
-2. **EDA** — histograms, count plots, and correlation heatmap
-3. **Feature identification** — `price` as target, remaining 8 columns
-   as inputs
-4. **Encoding** — one-hot encode `model`, `transmission`, `fuelType`
-5. **Scaling** — standard-scale the numeric input features
-
-**Final output:**
-- `X` (features): **(17,812, 33)**
-- `y` (target): **(17,812,)**
-
-The resulting `X`/`y` pair is fully cleaned, encoded, and scaled — ready
-to be fed directly into a machine learning model.
+- Loads `LR_ford_car.pkl`, `scaler.pkl`, `columns.pkl`
+- Dropdowns for `model`, `transmission`, `fuelType` built from the
+  reconstructed label-encoding maps above
+- On predict: converts each selected category to its label-encoded
+  integer, builds a single-row `DataFrame`, reorders columns to match
+  `columns.pkl`, scales the 5 numeric columns, and predicts
+- Written in a plainer, more student-like comment style (lowercase,
+  short comments) to match the original assignment code's voice,
+  rather than heavily annotated "AI-style" documentation
 
 ---
 
-## Q11 — Preparing Features (X and Y)
+## Part 6 — Debugging & Environment Issues
 
-Loaded the cleaned Ford Car dataset and separated it into independent
-features and the dependent target variable.
+A few real issues came up while testing, all resolved along the way:
 
-- `Y = df['price']` — target column (what we want to predict)
-- `X = df.drop('price', axis=1)` — all remaining columns as inputs
-
-**Shape of X:** `(17812, 8)` | **Shape of Y:** `(17812,)`
-
----
-
-## Q12 — One-Hot Encoding
-
-Identified all categorical columns in X using `select_dtypes(include='object')`.
-Applied **One-Hot Encoding** with `pd.get_dummies()` and converted the
-result to integer type using `.astype(int)`.
-
-**Categorical columns encoded:** `model`, `transmission`, `fuelType`
-
-**Shape after encoding:** `(17812, 36)`
-
-First 5 rows after encoding show binary (0/1) dummy columns for each
-category, replacing the original string columns.
+- **`IndentationError: unindent amount does not match previous
+  indent`** — traced to inconsistent spacing (1 space vs. 4 spaces)
+  in a manually retyped copy of the Q8 code block, plus other bugs in
+  that copy: scalar values passed to `pd.DataFrame()` without being
+  wrapped in lists, `pd.get_dummies(..., columns=encoded_columns)`
+  used incorrectly, and `model.columns` referenced on the trained
+  model object (which doesn't have a `.columns` attribute).
+- **Duplicated code blocks** — because the notebook was built up cell
+  by cell with each new cell re-pasting everything before it, the full
+  code dump included the same imports/loading/config code repeated
+  6 times. Cleaned down to a single, non-duplicated script.
+- **`streamlit : The term 'streamlit' is not recognized...`** in
+  PowerShell — Streamlit wasn't installed or wasn't on PATH. Fix:
+  `pip install streamlit`, or run via `python -m streamlit run app.py`
+  if PATH still doesn't pick it up.
 
 ---
 
-## Q13 — Feature Scaling (StandardScaler)
+## Current Project Files
 
-Applied `StandardScaler` on the numerical columns: `year`, `mileage`,
-`tax`, `mpg`, `engineSize`.
-
-Each column is transformed to have **mean = 0** and **standard deviation = 1**,
-ensuring no single feature dominates due to scale differences.
-
----
-
-## Q14 — Train-Test Split
-
-Split the preprocessed data into training and testing sets using
-`train_test_split` with `test_size=0.33` and `random_state=42`.
-
-| Set | X shape | y shape |
-|---|---|---|
-| Training | (11934, 36) | (11934,) |
-| Testing | (5878, 36) | (5878,) |
-
-67% data used for training, 33% held out for testing.
-
----
-
-## Q15 — Building Linear Regression Model
-
-Trained a `LinearRegression` model from `sklearn.linear_model` on
-`X_train` and `y_train`.
-
-- **Intercept:** `17251.61`
-- Coefficients reflect the weight assigned to each feature in predicting
-  car price — positive for features like `year` and `engineSize`,
-  negative for `mileage` and `mpg`
-
----
-
-## Q16 — Making Predictions
-
-Used the trained model to make predictions on `X_test` and stored
-the results in `y_pred`.
-
-**First 10 Predicted vs Actual values:**
-
-| # | Predicted (y_pred) | Actual (y_test) |
-|---|---|---|
-| 1 | 6,152.58 | 6,995 |
-| 2 | 9,374.38 | 8,999 |
-| 3 | 9,464.68 | 7,998 |
-| 4 | 4,597.92 | 5,491 |
-| 5 | 3,496.32 | 3,790 |
-| 6 | 15,303.51 | 18,200 |
-| 7 | 20,374.82 | 22,998 |
-| 8 | 12,631.56 | 11,000 |
-| 9 | 12,297.70 | 7,600 |
-| 10 | 17,230.22 | 14,985 |
-
-Most predictions are reasonably close to actual values, with a few
-deviations in rows where car specs are atypical.
-
----
-
-## Q17 — Model Evaluation using R² Score
-
-Calculated the R² score using `r2_score(y_test, y_pred)`.
-
-**R² Score: 0.831**
-
-**Interpretation:** The model explains **83.1% of the variance** in car
-prices using the available features. This means that year, mileage,
-engine size, fuel type, and transmission together account for the
-majority of price variation in the dataset.
-
-**Performance comment:** An R² of 0.83 indicates **good model
-performance** for a Linear Regression baseline. The remaining 16.9%
-unexplained variance is likely due to factors not in the dataset such
-as car condition, accident history, and regional pricing. A tree-based
-model like Random Forest could push this further toward 0.90+.
-
----
-
-## Q18 — Saving the Model
-
-Saved all trained objects using `joblib.dump()` for future reuse without
-retraining.
-
-| File | Contents |
-|---|---|
-| `LR_ford_car.pkl` | Trained Linear Regression model |
-| `scaler.pkl` | Fitted StandardScaler object |
-| `columns.pkl` | List of feature column names (36 columns) |
-
-All three files are needed together at prediction time — the scaler must
-transform new input data the same way as training data, and the columns
-list ensures the feature order matches what the model expects.
-
----
-
-## Project Files
-
-| File | Description |
+| File | Purpose |
 |---|---|
 | `ford_car.csv` | Raw source dataset |
-| `ford_assignment.py` | Full annotated script covering Q1–Q10 (EDA & Preprocessing) |
-| `ford_ml.py` | ML pipeline script covering Q11–Q18 (Modeling & Evaluation) |
-| `pipeline.py` | Standalone, minimal end-to-end pipeline script |
-| `LR_ford_car.pkl` | Saved Linear Regression model |
-| `scaler.pkl` | Saved StandardScaler object |
-| `columns.pkl` | Saved list of feature columns |
-| `Q4_histograms.png` | Histograms of numeric features |
-| `Q5_countplots.png` | Count plots of categorical features |
-| `Q6_heatmap.png` | Correlation heatmap |
+| `app.py` | Streamlit frontend for the **one-hot encoded** model (Session 21, Q1–Q10) |
+| `frontend.py` | Streamlit frontend for the **label-encoded** model (Assignment 20) |
+| `LR_ford_car.pkl` | Trained Linear Regression model (Assignment 20 — label-encoded) |
+| `scaler.pkl` | Fitted `StandardScaler` (Assignment 20) |
+| `columns.pkl` | List of 8 feature column names (Assignment 20, label-encoded) |
+
+> **Note:** `app.py` (one-hot based) will only work correctly against
+> a model/scaler/columns set trained with `pd.get_dummies()` — it does
+> **not** match the `.pkl` files produced by Assignment 20. `frontend.py`
+> is the version that correctly matches those files.
 
 ---
 
-## Key Takeaways
+## Where Things Stand
 
-- The dataset was clean aside from 154 duplicate rows and one clearly
-  erroneous `year` value (2060)
-- `year` and `mileage` are the dominant predictors of `price`, with
-  `engineSize`, `tax`, and `mpg` contributing secondary signal
-- The categorical mix (Petrol, Manual, Fiesta/Focus) reflects a
-  mainstream used-car market rather than a premium or electrified one
-- Linear Regression achieved an **R² of 0.831** — a strong baseline
-  that explains 83% of price variance
-- All preprocessing objects (scaler, columns) are saved alongside the
-  model to ensure consistent predictions on new data
-
----
-
-## Functions Used
-
-| Function | Purpose |
-|---|---|
-| `pd.read_csv()` | Load dataset |
-| `df.drop_duplicates()` | Remove duplicate rows |
-| `df.isnull().sum()` | Check missing values |
-| `df.describe()` | Statistical summary |
-| `df.select_dtypes()` | Identify column types |
-| `pd.get_dummies()` | One-Hot Encode categorical columns |
-| `StandardScaler()` | Scale numeric features to mean-0, std-1 |
-| `train_test_split()` | Split data into train and test sets |
-| `LinearRegression()` | Build regression model |
-| `model.fit()` | Train the model |
-| `model.predict()` | Make predictions |
-| `r2_score()` | Evaluate model performance |
-| `joblib.dump()` | Save model and preprocessing objects |
+- Both frontends (`app.py` and `frontend.py`) are written and
+  syntax-checked.
+- The Assignment 20 `.pkl` files (`LR_ford_car.pkl`, `scaler.pkl`,
+  `columns.pkl`) still need to be confirmed as present in the local
+  project folder before `frontend.py` can be run end-to-end.
+- Streamlit installation was flagged as missing on the local machine —
+  needs `pip install streamlit` before `streamlit run frontend.py` (or
+  `app.py`) will work.
+- Once running, the plan (Q10 of Session 21) is to take screenshots of
+  the working app for submission.
